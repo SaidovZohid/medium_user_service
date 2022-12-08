@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/SaidovZohid/medium_user_service/pkg/utils"
 	"github.com/SaidovZohid/medium_user_service/storage/repo"
 	"github.com/jmoiron/sqlx"
 )
@@ -37,12 +38,12 @@ func (ur *userRepo) Create(user *repo.User) (*repo.User, error) {
 		query,
 		user.FirstName,
 		user.LastName,
-		user.PhoneNumber,
+		utils.NullString(user.PhoneNumber),
 		user.Email,
-		user.Gender,
+		utils.NullString(user.Gender),
 		user.Password,
-		user.UserName,
-		user.ProfileImageUrl,
+		utils.NullString(user.Username),
+		utils.NullString(user.ProfileImageUrl),
 		user.Type,
 	).Scan(
 		&user.ID,
@@ -57,8 +58,11 @@ func (ur *userRepo) Create(user *repo.User) (*repo.User, error) {
 }
 
 func (ur *userRepo) Get(user_id int64) (*repo.User, error) {
-	var result repo.User
-	
+	var (
+		result                                         repo.User
+		phoneNumber, gender, Username, profileImageUrl sql.NullString
+	)
+
 	query := `
 		SELECT 
 			id,
@@ -81,47 +85,38 @@ func (ur *userRepo) Get(user_id int64) (*repo.User, error) {
 		&result.ID,
 		&result.FirstName,
 		&result.LastName,
-		&result.PhoneNumber,
+		&phoneNumber,
 		&result.Email,
-		&result.Gender,
+		&gender,
 		&result.Password,
-		&result.UserName,
-		&result.ProfileImageUrl,
+		&Username,
+		&profileImageUrl,
 		&result.Type,
 		&result.CreatedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
+	result.PhoneNumber = phoneNumber.String
+	result.Gender = gender.String
+	result.Username = Username.String
+	result.ProfileImageUrl = profileImageUrl.String
 
 	return &result, nil
 }
 
 func (ur *userRepo) Update(user *repo.User) (*repo.User, error) {
-	var result repo.User
-	
 	query := `
 		UPDATE users SET
 			first_name=$1,
 			last_name=$2,
 			phone_number=$3,
-			email=$4,
-			gender=$5,
-			password=$6,
-			username=$7,
-			profile_image_url=$8,
-			type=$9
-		WHERE id=$10 
+			gender=$4,
+			username=$5,
+			profile_image_url=$6,
+		WHERE id=$7 
 		RETURNING 
-			id,
-			first_name,
-			last_name,
-			phone_number,
 			email,
-			gender,
-			password,
-			username,
-			profile_image_url,
 			type,
 			created_at
 	`
@@ -129,39 +124,28 @@ func (ur *userRepo) Update(user *repo.User) (*repo.User, error) {
 		query,
 		user.FirstName,
 		user.LastName,
-		user.PhoneNumber,
-		user.Email,
-		user.Gender,
-		user.Password,
-		user.UserName,
-		user.ProfileImageUrl,
-		user.Type,
+		utils.NullString(user.PhoneNumber),
+		utils.NullString(user.Gender),
+		utils.NullString(user.Username),
+		utils.NullString(user.ProfileImageUrl),
 		user.ID,
 	).Scan(
-		&result.ID,
-		&result.FirstName,
-		&result.LastName,
-		&result.PhoneNumber,
-		&result.Email,
-		&result.Gender,
-		&result.Password,
-		&result.UserName,
-		&result.ProfileImageUrl,
-		&result.Type,
-		&result.CreatedAt,
+		&user.Email,
+		&user.Type,
+		&user.CreatedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	return &result, nil
+	return user, nil
 }
 
 func (ur *userRepo) Delete(user_id int64) error {
 	query := `
 		DELETE FROM users WHERE id = $1
 	`
-	res, err := ur.db.Exec(
+	result, err := ur.db.Exec(
 		query,
 		user_id,
 	)
@@ -169,18 +153,8 @@ func (ur *userRepo) Delete(user_id int64) error {
 		return err
 	}
 
-	result, err := res.RowsAffected()
-	
-	if err != nil {
-		return err
-	}
-
-	if result == 0 {
+	if count, _ := result.RowsAffected(); count == 0 {
 		return sql.ErrNoRows
-	}
-
-	if err != nil {
-		return err
 	}
 
 	return nil
@@ -200,7 +174,7 @@ func (ur *userRepo) GetAll(params *repo.GetAllUserParams) (*repo.GetAllUsersResu
 	if params.Search != "" {
 		str := "%" + params.Search + "%"
 		filter = fmt.Sprintf(`
-			WHERE first_name ILIKE '%s' OR last_name ILIKE '%s' OR phone_number ILIKE '%s' OR email ILIKE '%s' OR username ILIKE '%s'
+			WHERE first_name ILIKE '%s' OR last_name ILIKE '%s' OR phone_number ILIKE '%s' OR email ILIKE '%s' OR Username ILIKE '%s'
 		`, str, str, str, str, str)
 	}
 
@@ -218,7 +192,7 @@ func (ur *userRepo) GetAll(params *repo.GetAllUserParams) (*repo.GetAllUsersResu
 			type,
 			created_at
 		FROM users
-	` + filter  + `
+	` + filter + `
 		ORDER BY created_at DESC
 	` + limit
 
@@ -238,7 +212,7 @@ func (ur *userRepo) GetAll(params *repo.GetAllUserParams) (*repo.GetAllUsersResu
 			&user.Email,
 			&user.Gender,
 			&user.Password,
-			&user.UserName,
+			&user.Username,
 			&user.ProfileImageUrl,
 			&user.Type,
 			&user.CreatedAt,
@@ -252,9 +226,7 @@ func (ur *userRepo) GetAll(params *repo.GetAllUserParams) (*repo.GetAllUsersResu
 
 	queryCount := "SELECT count(1) FROM users " + filter
 
-	err = ur.db.QueryRow(queryCount).Scan(&result.Count)
-	
-	if err != nil {
+	if err = ur.db.QueryRow(queryCount).Scan(&result.Count); err != nil {
 		return nil, err
 	}
 
@@ -262,8 +234,11 @@ func (ur *userRepo) GetAll(params *repo.GetAllUserParams) (*repo.GetAllUsersResu
 }
 
 func (ur *userRepo) GetByEmail(user_email string) (*repo.User, error) {
-	var result repo.User
-	
+	var (
+		result                                         repo.User
+		phoneNumber, gender, username, profileImageUrl sql.NullString
+	)
+
 	query := `
 		SELECT 
 			id,
@@ -286,18 +261,23 @@ func (ur *userRepo) GetByEmail(user_email string) (*repo.User, error) {
 		&result.ID,
 		&result.FirstName,
 		&result.LastName,
-		&result.PhoneNumber,
+		&phoneNumber,
 		&result.Email,
-		&result.Gender,
+		&gender,
 		&result.Password,
-		&result.UserName,
-		&result.ProfileImageUrl,
+		&username,
+		&profileImageUrl,
 		&result.Type,
 		&result.CreatedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
+
+	result.PhoneNumber = phoneNumber.String
+	result.Gender = gender.String
+	result.Username = username.String
+	result.ProfileImageUrl = profileImageUrl.String
 
 	return &result, nil
 }

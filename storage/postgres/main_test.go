@@ -14,7 +14,7 @@ import (
 
 var (
 	dbManager storage.StorageI
-)   
+)
 
 func TestMain(m *testing.M) {
 	cfg := config.Load("./../..")
@@ -32,7 +32,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
-	
+
 	dbManager = storage.NewStoragePg(psqlConn)
 
 	os.Exit(m.Run())

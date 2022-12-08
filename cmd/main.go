@@ -43,11 +43,13 @@ func main() {
 	inMemory := storage.NewInMemoryStorage(rdb)
 
 	userService := service.NewUserService(strg, inMemory)
+	authService := service.NewAuthService(strg, inMemory)
 
 	listen, err := net.Listen("tcp", cfg.GrpcPort) 
 
 	s := grpc.NewServer()
 	pb.RegisterUserServiceServer(s, userService)
+	pb.RegisterAuthServiceServer(s, authService)
 	reflection.Register(s)
 
 	log.Println("gRPC server started port in: ", cfg.GrpcPort)

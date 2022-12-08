@@ -11,12 +11,12 @@ type User struct {
 	ID              int64
 	FirstName       string
 	LastName        string
-	PhoneNumber     *string
+	PhoneNumber     string
 	Email           string
-	Gender          *string
+	Gender          string
 	Password        string
-	UserName        *string
-	ProfileImageUrl *string
+	Username        string
+	ProfileImageUrl string
 	Type            string
 	CreatedAt       time.Time
 }
@@ -32,8 +32,8 @@ type UserStorageI interface {
 }
 
 type UpdatePassword struct {
-	UserID int64
-	Password string 
+	UserID   int64
+	Password string
 }
 
 type GetAllUserParams struct {
