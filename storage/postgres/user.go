@@ -113,7 +113,7 @@ func (ur *userRepo) Update(user *repo.User) (*repo.User, error) {
 			phone_number=$3,
 			gender=$4,
 			username=$5,
-			profile_image_url=$6,
+			profile_image_url=$6
 		WHERE id=$7 
 		RETURNING 
 			email,

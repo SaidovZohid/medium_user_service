@@ -78,6 +78,27 @@ func (s *UserService) Get(ctx context.Context, req *pb.IdRequest) (*pb.User, err
 	}, nil
 }
 
+func (s *UserService) GetByEmail(ctx context.Context, req *pb.GetByEmailRequest) (*pb.User, error) {
+	user, err := s.storage.User().GetByEmail(req.Email)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
+	}
+
+	return &pb.User{
+		Id:              user.ID,
+		FirstName:       user.FirstName,
+		LastName:        user.LastName,
+		PhoneNumber:     user.PhoneNumber,
+		Email:           user.Email,
+		Gender:          user.Gender,
+		Password:        user.Password,
+		Username:        user.Username,
+		ProfileImageUrl: user.ProfileImageUrl,
+		Type:            user.Type,
+		CreatedAt:       user.CreatedAt.Format(time.RFC3339),
+	}, nil
+}
+
 func (s *UserService) Update(ctx context.Context, req *pb.User) (*pb.User, error) {
 	user, err := s.storage.User().Update(&repo.User{
 		ID:              req.Id,
