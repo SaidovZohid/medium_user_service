@@ -17,7 +17,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
-// Hello From Zohid
+
 type AuthService struct {
 	pb.UnimplementedAuthServiceServer
 	storage    storage.StorageI
