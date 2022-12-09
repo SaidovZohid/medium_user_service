@@ -9,6 +9,8 @@ import (
 	"github.com/SaidovZohid/medium_user_service/service"
 	"github.com/SaidovZohid/medium_user_service/storage"
 	pb "github.com/SaidovZohid/medium_user_service/genproto/user_service"
+	grpcPkg "github.com/SaidovZohid/medium_user_service/pkg/grpc_client"
+
 	"github.com/go-redis/redis/v9"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -41,9 +43,15 @@ func main() {
 
 	strg := storage.NewStoragePg(psqlConn)
 	inMemory := storage.NewInMemoryStorage(rdb)
+	
+	grpcConn, err := grpcPkg.New(cfg)
+	if err != nil {
+		log.Fatalf("failed to get grpc connections: %v\n", err)
+	}
+
 
 	userService := service.NewUserService(strg, inMemory)
-	authService := service.NewAuthService(strg, inMemory)
+	authService := service.NewAuthService(strg, inMemory, grpcConn)
 
 	listen, err := net.Listen("tcp", cfg.GrpcPort) 
 
