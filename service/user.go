@@ -5,6 +5,7 @@ import (
 	"time"
 
 	pb "github.com/SaidovZohid/medium_user_service/genproto/user_service"
+	"github.com/SaidovZohid/medium_user_service/pkg/utils"
 	"github.com/SaidovZohid/medium_user_service/storage"
 	"github.com/SaidovZohid/medium_user_service/storage/repo"
 
@@ -27,13 +28,17 @@ func NewUserService(strg storage.StorageI, inMemory storage.InMemoryStorageI) *U
 }
 
 func (s *UserService) Create(ctx context.Context, req *pb.User) (*pb.User, error) {
+	hashedPassword, err := utils.HashPassword(req.Password)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "internatl server error: %v", err)
+	}
 	user, err := s.storage.User().Create(&repo.User{
 		FirstName:       req.FirstName,
 		LastName:        req.LastName,
 		PhoneNumber:     req.PhoneNumber,
 		Email:           req.Email,
 		Gender:          req.Gender,
-		Password:        req.Password,
+		Password:        hashedPassword,
 		Username:        req.Username,
 		ProfileImageUrl: req.ProfileImageUrl,
 		Type:            req.Type,

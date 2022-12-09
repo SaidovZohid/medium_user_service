@@ -24,3 +24,9 @@ migratedown:
 proto-gen:
 	rm -rf genproto
 	./scripts/gen-proto.sh ${CURRENT_DIR}
+
+pull-sub-module:
+	git submodule update --init --recursive
+
+update-sub-module:
+	git submodule update --remote --merge 

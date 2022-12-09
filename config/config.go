@@ -10,6 +10,9 @@ type Config struct {
 	Postgres      PostgresConfig
 	Authorization string
 	Redis         Redis
+
+	NotificationServiceHost     string
+	NotificationServiceGrpcPort string
 }
 
 type PostgresConfig struct {
@@ -31,7 +34,7 @@ func Load(path string) Config {
 	conf.AutomaticEnv()
 
 	cfg := Config{
-		GrpcPort: conf.GetString("GRPC_PORT"),
+		GrpcPort: conf.GetString("USER_SERVICE_GRPC_PORT"),
 		Postgres: PostgresConfig{
 			Host:     conf.GetString("POSTGRES_HOST"),
 			Port:     conf.GetString("POSTGRES_PORT"),
@@ -43,6 +46,8 @@ func Load(path string) Config {
 		Redis: Redis{
 			Addr: conf.GetString("REDIS_ADDR"),
 		},
+		NotificationServiceHost:     conf.GetString("NOTIFICATION_SERVICE_HOST"),
+		NotificationServiceGrpcPort: conf.GetString("NOTIFICATION_SERVICE_USER_SERVICE_GRPC_PORT"),
 	}
 	return cfg
 }
