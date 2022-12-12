@@ -2,10 +2,13 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/SaidovZohid/medium_user_service/config"
 	"github.com/SaidovZohid/medium_user_service/genproto/notification_service"
 	pb "github.com/SaidovZohid/medium_user_service/genproto/user_service"
 	grpcPkg "github.com/SaidovZohid/medium_user_service/pkg/grpc_client"
@@ -23,19 +26,26 @@ type AuthService struct {
 	storage    storage.StorageI
 	inMemory   storage.InMemoryStorageI
 	grpcClient grpcPkg.GrpcClientI
+	cfg        *config.Config
 }
 
-func NewAuthService(strg storage.StorageI, inMemory storage.InMemoryStorageI, grpc grpcPkg.GrpcClientI) *AuthService {
+func NewAuthService(strg storage.StorageI, inMemory storage.InMemoryStorageI, grpc grpcPkg.GrpcClientI, cfg *config.Config) *AuthService {
 	return &AuthService{
 		storage:    strg,
 		inMemory:   inMemory,
 		grpcClient: grpc,
+		cfg:        cfg,
 	}
 }
 
 const (
 	RegisterCodeKey   = "register_code_"
 	ForgotPasswordKey = "forgot_password_code_"
+)
+
+const (
+	VerificationEmail   = "verification_email"
+	ForgotPasswordEmail = "forgot_password_email"
 )
 
 func (s *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*emptypb.Empty, error) {
@@ -63,7 +73,7 @@ func (s *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*e
 	}
 
 	go func() {
-		err := s.sendVereficationCode(RegisterCodeKey, req.Email)
+		err := s.sendVereficationCode(RegisterCodeKey, req.Email, VerificationEmail)
 		if err != nil {
 			fmt.Printf("failed to send verification code: %v", err)
 		}
@@ -72,7 +82,7 @@ func (s *AuthService) Register(ctx context.Context, req *pb.RegisterRequest) (*e
 	return &emptypb.Empty{}, nil
 }
 
-func (s *AuthService) sendVereficationCode(key, email string) error {
+func (s *AuthService) sendVereficationCode(key, email, email_type string) error {
 	code, err := utils.GenerateRandomCode(6)
 	if err != nil {
 		return err
@@ -88,7 +98,7 @@ func (s *AuthService) sendVereficationCode(key, email string) error {
 		Body: map[string]string{
 			"code": code,
 		},
-		Type: "verification_email",
+		Type: email_type,
 	})
 	if err != nil {
 		return err
@@ -96,3 +106,154 @@ func (s *AuthService) sendVereficationCode(key, email string) error {
 
 	return nil
 }
+
+func (s *AuthService) Verify(ctx context.Context, req *pb.VerifyRequest) (*pb.AuthResponse, error) {
+	userData, err := s.inMemory.Get("user_" + req.Email)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "internale server error: %v", err)
+	}
+	// TODO: check verification code
+	var user repo.User
+	err = json.Unmarshal([]byte(userData), &user)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "internal server errror: %v", err)
+	}
+
+	code, err := s.inMemory.Get(RegisterCodeKey + user.Email)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "verification code is expired: %v", err)
+	}
+	if code != req.Code {
+		return nil, status.Errorf(codes.Unknown, "verification code is incorrect: %v", err)
+	}
+
+	result, err := s.storage.User().Create(&user)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
+	}
+	token, _, err := utils.CreateToken(s.cfg, &utils.TokenParams{
+		UserID:   user.ID,
+		Email:    user.Email,
+		UserType: user.Type,
+		Duration: time.Hour * 24 * 360,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
+	}
+
+	return &pb.AuthResponse{
+		Id:          result.ID,
+		FirstName:   result.FirstName,
+		LastName:    result.LastName,
+		Email:       result.Email,
+		Type:        result.Type,
+		CreatedAt:   result.CreatedAt.Format(time.RFC3339),
+		AccessToken: token,
+	}, nil
+}
+
+func (s *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.AuthResponse, error) {
+	user, err := s.storage.User().GetByEmail(req.Email)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, status.Errorf(codes.NotFound, "user not fount please register: %v", err)
+		}
+		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
+	}
+
+	err = utils.CheckPassword(req.Password, user.Password)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
+	}
+
+	token, _, err := utils.CreateToken(s.cfg, &utils.TokenParams{
+		UserID:   user.ID,
+		Email:    user.Email,
+		UserType: user.Type,
+		Duration: time.Hour * 24 * 360,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
+	}
+
+	return &pb.AuthResponse{
+		Id:          user.ID,
+		FirstName:   user.FirstName,
+		LastName:    user.LastName,
+		Email:       user.Email,
+		Type:        user.Type,
+		CreatedAt:   user.CreatedAt.Format(time.RFC3339),
+		AccessToken: token,
+	}, nil
+}
+
+func (s *AuthService) ForgotPassword(ctx context.Context, req *pb.ForgotPasswordRequest) (*emptypb.Empty, error) {
+	_, err := s.storage.User().GetByEmail(req.Email)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, status.Errorf(codes.NotFound, "email does not exists: %v", err)
+		}
+		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
+	}
+
+	go func() {
+		err := s.sendVereficationCode(ForgotPasswordKey, req.Email, ForgotPasswordEmail)
+		if err != nil {
+			fmt.Printf("failed to send verification code: %v", err)
+		}
+	}()
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *AuthService) VerifyForgotPassword(ctx context.Context, req *pb.VerifyRequest) (*pb.AuthResponse, error) {
+	code, err := s.inMemory.Get(ForgotPasswordKey + req.Email)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "verification code has been expired: %v", err)
+	}
+
+	if req.Code != code {
+		return nil, status.Errorf(codes.Internal, "verification code is not true: %v", err)
+
+	}
+
+	result, err := s.storage.User().GetByEmail(req.Email)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
+	}
+
+	token, _, err := utils.CreateToken(s.cfg, &utils.TokenParams{
+		UserID:   result.ID,
+		Email:    result.Email,
+		UserType: result.Type,
+		Duration: time.Minute * 30,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
+	}
+
+	return &pb.AuthResponse{
+		Id:          result.ID,
+		FirstName:   result.FirstName,
+		LastName:    result.LastName,
+		Email:       result.Email,
+		Type:        result.Type,
+		CreatedAt:   result.CreatedAt.Format(time.RFC3339),
+		AccessToken: token,
+	}, nil
+}
+
+// func (s *AuthService) UpdatePassword(ctx context.Context, req *pb.UpdatePasswordRequest) (*emptypb.Empty, error) {
+// 	hashedPassword, err := utils.HashPassword(req.Password)
+// 	if err != nil {
+// 		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
+// 	}
+
+// 	err = s.storage.User().UpdatePassword(&repo.UpdatePassword{
+// 		UserID: payload.UserID,
+// 		Password: hashedPassword,
+// 	})
+// 	if err != nil {
+// 		return 
+// 	}
+// }
