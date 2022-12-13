@@ -243,17 +243,37 @@ func (s *AuthService) VerifyForgotPassword(ctx context.Context, req *pb.VerifyRe
 	}, nil
 }
 
-// func (s *AuthService) UpdatePassword(ctx context.Context, req *pb.UpdatePasswordRequest) (*emptypb.Empty, error) {
-// 	hashedPassword, err := utils.HashPassword(req.Password)
-// 	if err != nil {
-// 		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
-// 	}
+func (s *AuthService) UpdatePassword(ctx context.Context, req *pb.UpdatePasswordRequest) (*emptypb.Empty, error) {
+	hashedPassword, err := utils.HashPassword(req.Password)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
+	}
 
-// 	err = s.storage.User().UpdatePassword(&repo.UpdatePassword{
-// 		UserID: payload.UserID,
-// 		Password: hashedPassword,
-// 	})
-// 	if err != nil {
-// 		return 
-// 	}
-// }
+	err = s.storage.User().UpdatePassword(&repo.UpdatePassword{
+		UserID:   req.UserId,
+		Password: hashedPassword,
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *AuthService) VerifyToken(ctx context.Context, req *pb.VerifyTokenRequest) (*pb.AuthPayload, error) {
+	accessToken := req.AccessToken
+
+	payload, err := utils.VerifyToken(s.cfg, accessToken)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "invalid token: %v", err)
+	}
+
+	return &pb.AuthPayload{
+		Id:        payload.Id.String(),
+		UserId:    payload.UserID,
+		Email:     payload.Email,
+		UserType:  payload.UserType,
+		IssuedAt:  payload.IssuedAt.Format(time.RFC3339),
+		ExpiredAt: payload.ExpiredAt.Format(time.RFC3339),
+	}, nil
+}
