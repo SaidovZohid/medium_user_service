@@ -15,10 +15,10 @@ swag-init:
 composeup:
 	docker compose --env-file ./.env.docker up
 
-migrateup:
+migrate-up:
 	migrate -path migrations -database "$(DB_URL)" -verbose up
 
-migratedown:
+migrate-down:
 	migrate -path migrations -database "$(DB_URL)" -verbose down
 
 proto-gen:
