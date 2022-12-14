@@ -6,10 +6,11 @@ import (
 	"net"
 
 	"github.com/SaidovZohid/medium_user_service/config"
-	"github.com/SaidovZohid/medium_user_service/service"
-	"github.com/SaidovZohid/medium_user_service/storage"
 	pb "github.com/SaidovZohid/medium_user_service/genproto/user_service"
 	grpcPkg "github.com/SaidovZohid/medium_user_service/pkg/grpc_client"
+	"github.com/SaidovZohid/medium_user_service/pkg/logger"
+	"github.com/SaidovZohid/medium_user_service/service"
+	"github.com/SaidovZohid/medium_user_service/storage"
 
 	"github.com/go-redis/redis/v9"
 	"github.com/jmoiron/sqlx"
@@ -49,9 +50,10 @@ func main() {
 		log.Fatalf("failed to get grpc connections: %v\n", err)
 	}
 
+	logger := logger.New()
 
-	userService := service.NewUserService(strg, inMemory)
-	authService := service.NewAuthService(strg, inMemory, grpcConn, &cfg)
+	userService := service.NewUserService(strg, inMemory, logger)
+	authService := service.NewAuthService(strg, inMemory, grpcConn, &cfg, logger)
 
 	listen, err := net.Listen("tcp", cfg.GrpcPort) 
 

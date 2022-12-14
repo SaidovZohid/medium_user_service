@@ -8,6 +8,7 @@ import (
 	"github.com/SaidovZohid/medium_user_service/pkg/utils"
 	"github.com/SaidovZohid/medium_user_service/storage"
 	"github.com/SaidovZohid/medium_user_service/storage/repo"
+	"github.com/sirupsen/logrus"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -18,12 +19,14 @@ type UserService struct {
 	pb.UnimplementedUserServiceServer
 	storage  storage.StorageI
 	inMemory storage.InMemoryStorageI
+	logger   *logrus.Logger
 }
 
-func NewUserService(strg storage.StorageI, inMemory storage.InMemoryStorageI) *UserService {
+func NewUserService(strg storage.StorageI, inMemory storage.InMemoryStorageI, log *logrus.Logger) *UserService {
 	return &UserService{
 		storage:  strg,
 		inMemory: inMemory,
+		logger:   log,
 	}
 }
 
