@@ -27,6 +27,7 @@ type CategoryServiceClient interface {
 	Get(ctx context.Context, in *GetCategoryRequest, opts ...grpc.CallOption) (*Category, error)
 	Update(ctx context.Context, in *Category, opts ...grpc.CallOption) (*Category, error)
 	Delete(ctx context.Context, in *GetCategoryRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	GetAll(ctx context.Context, in *GetAllCategoryParamsReq, opts ...grpc.CallOption) (*GetAllCategoryResponse, error)
 }
 
 type categoryServiceClient struct {
@@ -73,6 +74,15 @@ func (c *categoryServiceClient) Delete(ctx context.Context, in *GetCategoryReque
 	return out, nil
 }
 
+func (c *categoryServiceClient) GetAll(ctx context.Context, in *GetAllCategoryParamsReq, opts ...grpc.CallOption) (*GetAllCategoryResponse, error) {
+	out := new(GetAllCategoryResponse)
+	err := c.cc.Invoke(ctx, "/genproto.CategoryService/GetAll", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CategoryServiceServer is the server API for CategoryService service.
 // All implementations must embed UnimplementedCategoryServiceServer
 // for forward compatibility
@@ -81,6 +91,7 @@ type CategoryServiceServer interface {
 	Get(context.Context, *GetCategoryRequest) (*Category, error)
 	Update(context.Context, *Category) (*Category, error)
 	Delete(context.Context, *GetCategoryRequest) (*empty.Empty, error)
+	GetAll(context.Context, *GetAllCategoryParamsReq) (*GetAllCategoryResponse, error)
 	mustEmbedUnimplementedCategoryServiceServer()
 }
 
@@ -99,6 +110,9 @@ func (UnimplementedCategoryServiceServer) Update(context.Context, *Category) (*C
 }
 func (UnimplementedCategoryServiceServer) Delete(context.Context, *GetCategoryRequest) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
+}
+func (UnimplementedCategoryServiceServer) GetAll(context.Context, *GetAllCategoryParamsReq) (*GetAllCategoryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAll not implemented")
 }
 func (UnimplementedCategoryServiceServer) mustEmbedUnimplementedCategoryServiceServer() {}
 
@@ -185,6 +199,24 @@ func _CategoryService_Delete_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CategoryService_GetAll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAllCategoryParamsReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CategoryServiceServer).GetAll(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/genproto.CategoryService/GetAll",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CategoryServiceServer).GetAll(ctx, req.(*GetAllCategoryParamsReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CategoryService_ServiceDesc is the grpc.ServiceDesc for CategoryService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -207,6 +239,10 @@ var CategoryService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Delete",
 			Handler:    _CategoryService_Delete_Handler,
+		},
+		{
+			MethodName: "GetAll",
+			Handler:    _CategoryService_GetAll_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -130,10 +130,10 @@ func (s *AuthService) Verify(ctx context.Context, req *pb.VerifyRequest) (*pb.Au
 
 	code, err := s.inMemory.Get(RegisterCodeKey + user.Email)
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "verification code is expired: %v", err)
+		return nil, status.Errorf(codes.NotFound, "code_expired")
 	}
 	if code != req.Code {
-		return nil, status.Errorf(codes.Unknown, "verification code is incorrect: %v", err)
+		return nil, status.Errorf(codes.Unknown, "incorrect_code", err)
 	}
 
 	result, err := s.storage.User().Create(&user)
@@ -168,15 +168,14 @@ func (s *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Auth
 	if err != nil {
 		s.logger.WithError(err).Error("failed to get user by email in login func")
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, status.Errorf(codes.NotFound, "user not fount please register: %v", err)
+			return nil, status.Errorf(codes.NotFound, "user not found: %v", err)
 		}
 		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
 	}
 
 	err = utils.CheckPassword(req.Password, user.Password)
 	if err != nil {
-		s.logger.WithError(err).Error("failed to check password in login func")
-		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
+		return nil, status.Errorf(codes.Internal, "incorrect_password")
 	}
 
 	token, _, err := utils.CreateToken(s.cfg, &utils.TokenParams{
@@ -186,7 +185,7 @@ func (s *AuthService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Auth
 		Duration: time.Hour * 24 * 360,
 	})
 	if err != nil {
-		s.logger.WithError(err).Error("failed to create token in login func")
+		s.logger.WithError(err).Error("failed to create token")
 		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
 	}
 
@@ -288,12 +287,23 @@ func (s *AuthService) VerifyToken(ctx context.Context, req *pb.VerifyTokenReques
 		return nil, status.Errorf(codes.Unauthenticated, "invalid token: %v", err)
 	}
 
+	hasPermission, err := s.storage.Permission().CheckPermission(&repo.Permission{
+		UserType: payload.UserType,
+		Resource: req.Resource,
+		Action:   req.Action,
+	})
+	if err != nil {
+		s.logger.WithError(err).Error("failed to verify token in VerifyToken func")
+		return nil, status.Errorf(codes.Unauthenticated, "invalid token: %v", err)
+	}
+
 	return &pb.AuthPayload{
-		Id:        payload.Id.String(),
-		UserId:    payload.UserID,
-		Email:     payload.Email,
-		UserType:  payload.UserType,
-		IssuedAt:  payload.IssuedAt.Format(time.RFC3339),
-		ExpiredAt: payload.ExpiredAt.Format(time.RFC3339),
+		Id:            payload.Id.String(),
+		UserId:        payload.UserID,
+		Email:         payload.Email,
+		UserType:      payload.UserType,
+		IssuedAt:      payload.IssuedAt.Format(time.RFC3339),
+		ExpiredAt:     payload.ExpiredAt.Format(time.RFC3339),
+		HasPermission: hasPermission,
 	}, nil
 }

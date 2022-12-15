@@ -33,6 +33,7 @@ func NewUserService(strg storage.StorageI, inMemory storage.InMemoryStorageI, lo
 func (s *UserService) Create(ctx context.Context, req *pb.User) (*pb.User, error) {
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
+		s.logger.WithError(err).Error("failed to hash password")
 		return nil, status.Errorf(codes.Internal, "internatl server error: %v", err)
 	}
 	user, err := s.storage.User().Create(&repo.User{
@@ -47,6 +48,7 @@ func (s *UserService) Create(ctx context.Context, req *pb.User) (*pb.User, error
 		Type:            req.Type,
 	})
 	if err != nil {
+		s.logger.WithError(err).Error("failed to create user")
 		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
 	}
 
@@ -68,6 +70,7 @@ func (s *UserService) Create(ctx context.Context, req *pb.User) (*pb.User, error
 func (s *UserService) Get(ctx context.Context, req *pb.IdRequest) (*pb.User, error) {
 	user, err := s.storage.User().Get(req.Id)
 	if err != nil {
+		s.logger.WithError(err).Error("failed to get user in get func")
 		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
 	}
 
@@ -89,6 +92,7 @@ func (s *UserService) Get(ctx context.Context, req *pb.IdRequest) (*pb.User, err
 func (s *UserService) GetByEmail(ctx context.Context, req *pb.GetByEmailRequest) (*pb.User, error) {
 	user, err := s.storage.User().GetByEmail(req.Email)
 	if err != nil {
+		s.logger.WithError(err).Error("failed to getbyemail user in get func")
 		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
 	}
 
@@ -120,6 +124,7 @@ func (s *UserService) Update(ctx context.Context, req *pb.User) (*pb.User, error
 		Type:            req.Type,
 	})
 	if err != nil {
+		s.logger.WithError(err).Error("failed to update user in update func")
 		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
 	}
 
@@ -141,6 +146,7 @@ func (s *UserService) Update(ctx context.Context, req *pb.User) (*pb.User, error
 func (s *UserService) Delete(ctx context.Context, req *pb.IdRequest) (*emptypb.Empty, error) {
 	err := s.storage.User().Delete(req.Id)
 	if err != nil {
+		s.logger.WithError(err).Error("failed to delete user in delete func")
 		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
 	}
 	return &emptypb.Empty{}, nil
@@ -153,6 +159,7 @@ func (s *UserService) GetAll(ctx context.Context, req *pb.GetAllUsersRequest) (*
 		Search: req.Search,
 	})
 	if err != nil {
+		s.logger.WithError(err).Error("failed to get all user in getall func")
 		return nil, status.Errorf(codes.Internal, "internal server error: %v", err)
 	}
 

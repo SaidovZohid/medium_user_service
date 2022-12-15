@@ -164,6 +164,9 @@ func (ur *userRepo) GetAll(params *repo.GetAllUserParams) (*repo.GetAllUsersResu
 	result := repo.GetAllUsersResult{
 		Users: make([]*repo.User, 0),
 	}
+	var (
+		phoneNumber, gender, username, profileImageUrl sql.NullString
+	)
 
 	offset := (params.Page - 1) * params.Limit
 
@@ -208,19 +211,22 @@ func (ur *userRepo) GetAll(params *repo.GetAllUserParams) (*repo.GetAllUsersResu
 			&user.ID,
 			&user.FirstName,
 			&user.LastName,
-			&user.PhoneNumber,
+			&phoneNumber,
 			&user.Email,
-			&user.Gender,
+			&gender,
 			&user.Password,
-			&user.Username,
-			&user.ProfileImageUrl,
+			&username,
+			&profileImageUrl,
 			&user.Type,
 			&user.CreatedAt,
 		)
 		if err != nil {
 			return nil, err
 		}
-
+		user.PhoneNumber = phoneNumber.String
+		user.Gender = gender.String
+		user.Username = username.String
+		user.ProfileImageUrl = profileImageUrl.String
 		result.Users = append(result.Users, &user)
 	}
 
