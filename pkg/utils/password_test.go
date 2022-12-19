@@ -8,7 +8,7 @@ import (
 )
 
 func TestPassword(t *testing.T) {
-	password := "secret-password"
+	password := "zufar2000"
 	hashedPassword, err := HashPassword(password)
 	log.Print(hashedPassword)
 	require.NoError(t, err)

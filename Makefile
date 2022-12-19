@@ -21,6 +21,12 @@ migrate-up:
 migrate-down:
 	migrate -path migrations -database "$(DB_URL)" -verbose down
 
+migrate-up1:
+	migrate -path migrations -database "$(DB_URL)" -verbose up 1 
+
+migrate-down1:
+	migrate -path migrations -database "$(DB_URL)" -verbose down 1
+
 proto-gen:
 	rm -rf genproto
 	./scripts/gen-proto.sh ${CURRENT_DIR}

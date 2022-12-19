@@ -5,6 +5,7 @@ import (
 
 	"github.com/SaidovZohid/medium_user_service/pkg/utils"
 	"github.com/SaidovZohid/medium_user_service/storage/repo"
+	"github.com/bxcodec/faker/v4"
 	"github.com/stretchr/testify/require"
 )
 
@@ -12,9 +13,9 @@ func createUser(t *testing.T) *repo.User {
 	hashedPassword, err := utils.HashPassword("1234567890")
 	require.NoError(t, err)
 	user, err := dbManager.User().Create(&repo.User{
-		FirstName: "Zohid",
-		LastName:  "Saidov",
-		Email:     "zohidsaidov17+2@gmail.com",
+		FirstName: faker.FirstName(),
+		LastName:  faker.LastName(),
+		Email:     faker.Email(),
 		Password:  hashedPassword,
 		Type:      "user",
 	})
