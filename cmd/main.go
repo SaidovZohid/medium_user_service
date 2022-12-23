@@ -8,6 +8,7 @@ import (
 	"github.com/SaidovZohid/medium_user_service/config"
 	pb "github.com/SaidovZohid/medium_user_service/genproto/user_service"
 	grpcPkg "github.com/SaidovZohid/medium_user_service/pkg/grpc_client"
+	messagebroker "github.com/SaidovZohid/medium_user_service/pkg/messagebroker"
 	"github.com/SaidovZohid/medium_user_service/pkg/logger"
 	"github.com/SaidovZohid/medium_user_service/service"
 	"github.com/SaidovZohid/medium_user_service/storage"
@@ -52,8 +53,10 @@ func main() {
 
 	logger := logger.New()
 
+	kafka := messagebroker.NewKafka(cfg)
+
 	userService := service.NewUserService(strg, inMemory, logger)
-	authService := service.NewAuthService(strg, inMemory, grpcConn, &cfg, logger)
+	authService := service.NewAuthService(strg, inMemory, grpcConn, &cfg, logger, kafka)
 
 	listen, err := net.Listen("tcp", cfg.GrpcPort) 
 

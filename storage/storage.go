@@ -12,14 +12,14 @@ type StorageI interface {
 }
 
 type StoragePg struct {
-	userRepo     repo.UserStorageI
-	permissionRepo     repo.PermissionStorageI
+	userRepo       repo.UserStorageI
+	permissionRepo repo.PermissionStorageI
 }
 
 func NewStoragePg(db *sqlx.DB) StorageI {
 	return &StoragePg{
-		userRepo:     postgres.NewUser(db),
-		permissionRepo:     postgres.NewPermission(db),
+		userRepo:       postgres.NewUser(db),
+		permissionRepo: postgres.NewPermission(db),
 	}
 }
 

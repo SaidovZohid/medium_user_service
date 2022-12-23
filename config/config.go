@@ -9,6 +9,7 @@ type Config struct {
 	GrpcPort      string
 	Postgres      PostgresConfig
 	Authorization string
+	KafkaUrl      string
 	Redis         Redis
 
 	NotificationServiceHost     string
@@ -35,6 +36,7 @@ func Load(path string) Config {
 
 	cfg := Config{
 		GrpcPort: conf.GetString("USER_SERVICE_GRPC_PORT"),
+		KafkaUrl: conf.GetString("KAFKA_URL"),
 		Postgres: PostgresConfig{
 			Host:     conf.GetString("POSTGRES_HOST"),
 			Port:     conf.GetString("POSTGRES_PORT"),
