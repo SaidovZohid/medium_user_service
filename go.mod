@@ -5,6 +5,8 @@ go 1.19
 require (
 	github.com/Shopify/sarama v1.37.2
 	github.com/bxcodec/faker/v4 v4.0.0-beta.3
+	github.com/cloudevents/sdk-go/protocol/kafka_sarama/v2 v2.12.0
+	github.com/cloudevents/sdk-go/v2 v2.12.0
 	github.com/go-redis/redis/v9 v9.0.0-rc.1
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang/protobuf v1.5.2
@@ -22,8 +24,6 @@ require (
 
 require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/cloudevents/sdk-go/protocol/kafka_sarama/v2 v2.12.0 // indirect
-	github.com/cloudevents/sdk-go/v2 v2.12.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/eapache/go-resiliency v1.3.0 // indirect
